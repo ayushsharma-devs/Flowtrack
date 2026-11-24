@@ -1,11 +1,28 @@
 # =============================================================================
 # FlowTrack — Production Docker Compose
-# Services: backend (Django/Gunicorn), frontend (Next.js), nginx (reverse proxy)
-# Database is expected to be an external RDS instance (via DATABASE_URL).
+# Services: db (Postgres), backend (Django/Gunicorn), frontend (Next.js), nginx (reverse proxy)
 # =============================================================================
-version: "3.8"
 
 services:
+  # ---------- PostgreSQL Database (Built-in for EC2) ----------
+  db:
+    image: postgres:16-alpine
+    container_name: flowtrack-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flowtrack_db
+      POSTGRES_USER: flowtrack_user
+      POSTGRES_PASSWORD: flowtrack_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowtrack_user -d flowtrack_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flowtrack-net
+
   # ---------- Django / Gunicorn backend ----------
   backend:
     build:
@@ -19,6 +36,9 @@ services:
       - DJANGO_SETTINGS_MODULE=config.settings
     expose:
       - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
       interval: 30s
@@ -69,6 +89,9 @@ services:
       retries: 3
     networks:
       - flowtrack-net
+
+volumes:
+  postgres_data:
 
 networks:
   flowtrack-net:
