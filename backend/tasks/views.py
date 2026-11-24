@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -8,6 +9,7 @@ from .serializers import TaskSerializer
 from projects.models import Project
 from activity.services import log_activity
 from dependencies.services import get_blocked_task_ids_for_project
+from members.permissions import is_project_accessible, can_edit_project
 
 class ProjectTaskListCreateView(generics.ListCreateAPIView):
     """
@@ -20,7 +22,7 @@ class ProjectTaskListCreateView(generics.ListCreateAPIView):
     def get_project(self):
         project_id = self.kwargs.get('project_id')
         project = get_object_or_404(Project, id=project_id)
-        if project.owner != self.request.user:
+        if not is_project_accessible(self.request.user, project):
             raise PermissionDenied("You do not have permission to access tasks in this project.")
         return project
 
@@ -65,6 +67,8 @@ class ProjectTaskListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         project = self.get_project()
+        if not can_edit_project(self.request.user, project):
+            raise PermissionDenied("You do not have permission to create tasks in this project.")
         task = serializer.save(project=project)
         log_activity(
             project=project,
@@ -84,7 +88,10 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return Task.objects.filter(project__owner=self.request.user)
+        user = self.request.user
+        return Task.objects.filter(
+            Q(project__owner=user) | Q(project__members__user=user)
+        ).distinct()
 
     def perform_update(self, serializer):
         previous_status = self.get_object().status

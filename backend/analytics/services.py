@@ -89,13 +89,16 @@ def calculate_project_analytics(project):
 
 def calculate_user_overview_analytics(user):
     """
-    Computes aggregated overview analytics across all projects owned by the user.
+    Computes aggregated overview analytics across all projects accessible to the user (owned or member).
     """
+    from django.db.models import Q
+    from projects.models import Project
+
     now = timezone.now()
-    projects = list(user.projects.all())
+    projects = list(Project.objects.filter(Q(owner=user) | Q(members__user=user)).distinct())
     total_projects = len(projects)
 
-    all_tasks = list(Task.objects.filter(project__owner=user))
+    all_tasks = list(Task.objects.filter(Q(project__owner=user) | Q(project__members__user=user)).distinct())
     total_tasks = len(all_tasks)
     completed_tasks = sum(1 for t in all_tasks if t.status == Task.STATUS_COMPLETED)
     in_progress_tasks = sum(1 for t in all_tasks if t.status == Task.STATUS_IN_PROGRESS)

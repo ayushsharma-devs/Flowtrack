@@ -8,6 +8,9 @@ import {
   ProjectAnalytics,
   OverallAnalytics,
   ActivityLog,
+  ProjectMember,
+  ProjectInvitation,
+  MemberRole,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
@@ -127,6 +130,23 @@ export const analyticsApi = {
 export const activityApi = {
   getRecentActivity: () => api.get<ActivityLog[]>('/api/activity/'),
   getProjectActivity: (projectId: number) => api.get<ActivityLog[]>(`/api/projects/${projectId}/activity/`),
+};
+
+// Members & Collaboration endpoints
+export const membersApi = {
+  list: (projectId: number) => api.get<ProjectMember[]>(`/api/members/projects/${projectId}/members/`),
+  invite: (projectId: number, data: { email: string; role: MemberRole }) =>
+    api.post<ProjectInvitation>(`/api/members/projects/${projectId}/invite/`, data),
+  remove: (projectId: number, memberId: number) =>
+    api.delete(`/api/members/projects/${projectId}/members/${memberId}/`),
+  updateRole: (projectId: number, memberId: number, role: MemberRole) =>
+    api.patch<ProjectMember>(`/api/members/projects/${projectId}/members/${memberId}/role/`, { role }),
+  leave: (projectId: number) => api.post(`/api/members/projects/${projectId}/leave/`),
+  getMyInvitations: () => api.get<ProjectInvitation[]>('/api/members/invitations/'),
+  acceptInvite: (token: string) =>
+    api.post<{ detail: string; project_id: number; role: string }>('/api/members/invitations/accept/', { token }),
+  declineInvite: (token: string) =>
+    api.post<{ detail: string }>(`/api/members/invitations/${token}/decline/`),
 };
 
 export default api;

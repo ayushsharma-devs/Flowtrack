@@ -5,6 +5,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 
 from projects.models import Project
+from members.permissions import is_project_accessible
 from .services import calculate_project_analytics, calculate_user_overview_analytics
 
 class ProjectAnalyticsView(APIView):
@@ -15,7 +16,7 @@ class ProjectAnalyticsView(APIView):
 
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
-        if project.owner != request.user:
+        if not is_project_accessible(request.user, project):
             raise PermissionDenied("You do not have permission to view analytics for this project.")
 
         analytics_data = calculate_project_analytics(project)

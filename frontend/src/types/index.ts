@@ -1,5 +1,6 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type MemberRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
 export interface User {
   id: number;
@@ -57,6 +58,8 @@ export interface Project {
   todo_tasks: number;
   blocked_tasks: number;
   overdue_tasks: number;
+  user_role?: MemberRole;
+  members_count?: number;
 }
 
 export interface TaskDependency {
@@ -159,4 +162,25 @@ export interface ActivityLog {
   entity_type: string;
   entity_id: number | null;
   created_at: string;
+}
+
+export interface ProjectMember {
+  id: number;
+  user: User;
+  role: MemberRole;
+  joined_at: string;
+}
+
+export interface ProjectInvitation {
+  id: number;
+  project: {
+    id: number;
+    title: string;
+  };
+  invited_by: string;
+  email: string;
+  role: MemberRole;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  created_at: string;
+  expires_at: string;
 }

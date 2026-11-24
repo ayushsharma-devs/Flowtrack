@@ -12,6 +12,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     todo_tasks = serializers.SerializerMethodField()
     blocked_tasks = serializers.SerializerMethodField()
     overdue_tasks = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
+    members_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -31,6 +33,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             'todo_tasks',
             'blocked_tasks',
             'overdue_tasks',
+            'user_role',
+            'members_count',
         ]
         read_only_fields = ('id', 'owner', 'created_at', 'updated_at')
 
@@ -55,3 +59,14 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_overdue_tasks(self, obj):
         now = timezone.now()
         return obj.tasks.filter(status__in=['todo', 'in_progress'], due_date__lt=now).count()
+
+    def get_user_role(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return None
+        from members.permissions import get_user_role
+        return get_user_role(request.user, obj)
+
+    def get_members_count(self, obj):
+        # Total members plus the owner
+        return obj.members.count() + 1

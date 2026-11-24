@@ -9,4 +9,5 @@ urlpatterns = [
     path('api/dependencies/', include('dependencies.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/activity/', include('activity.urls')),
+    path('api/members/', include('members.urls')),
 ]

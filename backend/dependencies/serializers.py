@@ -24,10 +24,11 @@ class TaskDependencySerializer(serializers.ModelSerializer):
         prerequisite_task = attrs.get('prerequisite_task')
         dependent_task = attrs.get('dependent_task')
 
-        # Check authorization - both tasks must belong to projects owned by the user
+        # Check authorization - user must have edit permissions on both projects
         user = self.context['request'].user
-        if prerequisite_task.project.owner != user or dependent_task.project.owner != user:
-            raise serializers.ValidationError("You do not have permission to link tasks from this project.")
+        from members.permissions import can_edit_project
+        if not can_edit_project(user, prerequisite_task.project) or not can_edit_project(user, dependent_task.project):
+            raise serializers.ValidationError("You do not have permission to link tasks in this project.")
 
         # Execute dependency rules and cycle detection
         validate_dependency_rules(prerequisite_task, dependent_task)

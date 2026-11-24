@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { ActivityStream } from '@/components/ActivityStream';
 import { ProjectModal } from '@/components/ProjectModals';
+import { PendingInvitationsBanner } from '@/components/PendingInvitationsBanner';
 import { OverallAnalytics, Project } from '@/types';
 import { analyticsApi, projectsApi } from '@/services/api';
 import {
@@ -54,6 +55,9 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 p-8 space-y-8 max-w-7xl mx-auto w-full">
+        {/* Pending Project Invitations */}
+        <PendingInvitationsBanner onInvitationHandled={fetchDashboardData} />
+
         {/* Welcome & Actions Row */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>

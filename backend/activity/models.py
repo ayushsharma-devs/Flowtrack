@@ -12,6 +12,11 @@ class ActivityLog(models.Model):
         ('task_deleted', 'Task Deleted'),
         ('dependency_added', 'Dependency Added'),
         ('dependency_removed', 'Dependency Removed'),
+        ('member_invited', 'Member Invited'),
+        ('member_joined', 'Member Joined'),
+        ('member_removed', 'Member Removed'),
+        ('member_left', 'Member Left'),
+        ('member_role_changed', 'Member Role Changed'),
     ]
 
     project = models.ForeignKey(

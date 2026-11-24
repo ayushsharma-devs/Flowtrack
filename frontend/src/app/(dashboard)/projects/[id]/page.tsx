@@ -8,9 +8,11 @@ import { ProjectAnalyticsView } from '@/components/ProjectAnalyticsView';
 import { ActivityStream } from '@/components/ActivityStream';
 import { TaskModal } from '@/components/TaskModal';
 import { ProjectModal } from '@/components/ProjectModals';
+import { ProjectMembersList } from '@/components/ProjectMembersList';
+import { InviteMemberModal } from '@/components/InviteMemberModal';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
-import { Project, Task, TaskPriority, TaskStatus } from '@/types';
+import { Project, Task, TaskPriority, TaskStatus, MemberRole } from '@/types';
 import { projectsApi, tasksApi } from '@/services/api';
 import {
   FolderKanban,
@@ -33,9 +35,15 @@ import {
   ChevronRight,
   ArrowRight,
   Zap,
+  Users,
+  UserPlus,
+  Crown,
+  Shield,
+  Edit2,
+  Eye,
 } from 'lucide-react';
 
-type TabType = 'tasks' | 'graph' | 'analytics' | 'activity';
+type TabType = 'tasks' | 'graph' | 'analytics' | 'members' | 'activity';
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -57,6 +65,7 @@ export default function ProjectDetailPage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [taskActionError, setTaskActionError] = useState<string | null>(null);
 
   const fetchProjectData = useCallback(async () => {
@@ -136,10 +145,29 @@ export default function ProjectDetailPage() {
         <div className="bg-[#111726] border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   Project #{project.id}
                 </span>
+                {project.user_role && (
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      project.user_role === 'owner'
+                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                        : project.user_role === 'admin'
+                        ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/25'
+                        : project.user_role === 'editor'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                        : 'bg-slate-500/10 text-slate-400 border-slate-500/25'
+                    }`}
+                  >
+                    {project.user_role === 'owner' && <Crown className="w-3 h-3" />}
+                    {project.user_role === 'admin' && <Shield className="w-3 h-3" />}
+                    {project.user_role === 'editor' && <Edit2 className="w-3 h-3" />}
+                    {project.user_role === 'viewer' && <Eye className="w-3 h-3" />}
+                    Your Role: {project.user_role.toUpperCase()}
+                  </span>
+                )}
                 {project.deadline && (
                   <span className="text-xs text-slate-400 flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5 text-slate-500" />
@@ -154,20 +182,33 @@ export default function ProjectDetailPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => setIsProjectModalOpen(true)}
-                className="px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                Edit Info
-              </button>
-              <button
-                onClick={handleCreateTask}
-                className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                Add Task
-              </button>
+              {(project.user_role === 'owner' || project.user_role === 'admin') && (
+                <button
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-colors flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-indigo-400" />
+                  Invite Collaborator
+                </button>
+              )}
+              {project.user_role !== 'viewer' && (
+                <button
+                  onClick={() => setIsProjectModalOpen(true)}
+                  className="px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit Info
+                </button>
+              )}
+              {project.user_role !== 'viewer' && (
+                <button
+                  onClick={handleCreateTask}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-lg shadow-indigo-600/20 flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Task
+                </button>
+              )}
             </div>
           </div>
 
@@ -260,6 +301,18 @@ export default function ProjectDetailPage() {
           >
             <BarChart3 className="w-4 h-4" />
             Analytics & Bottlenecks
+          </button>
+
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === 'members'
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Team & Access ({project.members_count ?? 1})
           </button>
 
           <button
@@ -450,6 +503,19 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
+        {/* TAB: Members & Access */}
+        {activeTab === 'members' && (
+          <div className="space-y-4">
+            <ProjectMembersList
+              projectId={projectId}
+              projectOwnerId={project.owner}
+              currentUserRole={project.user_role}
+              onOpenInviteModal={() => setIsInviteModalOpen(true)}
+              onProjectUpdated={fetchProjectData}
+            />
+          </div>
+        )}
+
         {/* TAB 4: Activity */}
         {activeTab === 'activity' && (
           <div className="bg-[#111726] border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -475,6 +541,14 @@ export default function ProjectDetailPage() {
         onClose={() => setIsProjectModalOpen(false)}
         onSaved={fetchProjectData}
         projectToEdit={project}
+      />
+
+      <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        projectId={projectId}
+        projectTitle={project.title}
+        onMemberInvited={fetchProjectData}
       />
     </div>
   );

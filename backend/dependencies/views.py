@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -11,6 +12,7 @@ from tasks.models import Task
 from projects.models import Project
 from activity.services import log_activity
 from .services import get_blocked_task_ids_for_project
+from members.permissions import is_project_accessible, can_edit_project
 
 class DependencyCreateView(generics.CreateAPIView):
     """
@@ -40,10 +42,15 @@ class DependencyDeleteView(generics.DestroyAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return TaskDependency.objects.filter(prerequisite_task__project__owner=self.request.user)
+        user = self.request.user
+        return TaskDependency.objects.filter(
+            Q(prerequisite_task__project__owner=user) | Q(prerequisite_task__project__members__user=user)
+        ).distinct()
 
     def perform_destroy(self, instance):
         project = instance.prerequisite_task.project
+        if not can_edit_project(self.request.user, project):
+            raise PermissionDenied("You do not have permission to delete dependencies in this project.")
         dep_id = instance.id
         prereq_title = instance.prerequisite_task.title
         dep_title = instance.dependent_task.title
@@ -68,7 +75,7 @@ class ProjectGraphView(APIView):
 
     def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
-        if project.owner != request.user:
+        if not is_project_accessible(request.user, project):
             raise PermissionDenied("You do not have permission to view this project's graph.")
 
         tasks = list(Task.objects.filter(project=project))

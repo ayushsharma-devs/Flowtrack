@@ -1,0 +1,75 @@
+# =============================================================================
+# FlowTrack — Production Docker Compose
+# Services: backend (Django/Gunicorn), frontend (Next.js), nginx (reverse proxy)
+# Database is expected to be an external RDS instance (via DATABASE_URL).
+# =============================================================================
+version: "3.8"
+
+services:
+  # ---------- Django / Gunicorn backend ----------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flowtrack-backend
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - flowtrack-net
+
+  # ---------- Next.js frontend ----------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+    container_name: flowtrack-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - flowtrack-net
+
+  # ---------- Nginx reverse proxy ----------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: flowtrack-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - flowtrack-net
+
+networks:
+  flowtrack-net:
+    driver: bridge

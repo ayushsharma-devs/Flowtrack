@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { ProjectModal } from '@/components/ProjectModals';
+import { PendingInvitationsBanner } from '@/components/PendingInvitationsBanner';
 import { Project } from '@/types';
 import { projectsApi } from '@/services/api';
 import {
@@ -21,6 +22,11 @@ import {
   Folder,
   Layers,
   ArrowRight,
+  Users,
+  Crown,
+  Shield,
+  Edit2,
+  Eye,
 } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -83,6 +89,9 @@ export default function ProjectsPage() {
       />
 
       <main className="flex-1 p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Pending Invitations Banner */}
+        <PendingInvitationsBanner onInvitationHandled={fetchProjects} />
+
         {/* Controls Toolbar */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="relative flex-1 max-w-md">
@@ -144,26 +153,59 @@ export default function ProjectsPage() {
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="text-base font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
-                      {p.title}
-                    </h3>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {p.user_role && (
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              p.user_role === 'owner'
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                                : p.user_role === 'admin'
+                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/25'
+                                : p.user_role === 'editor'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                                : 'bg-slate-500/10 text-slate-400 border-slate-500/25'
+                            }`}
+                          >
+                            {p.user_role === 'owner' && <Crown className="w-2.5 h-2.5" />}
+                            {p.user_role === 'admin' && <Shield className="w-2.5 h-2.5" />}
+                            {p.user_role === 'editor' && <Edit2 className="w-2.5 h-2.5" />}
+                            {p.user_role === 'viewer' && <Eye className="w-2.5 h-2.5" />}
+                            {p.user_role.toUpperCase()}
+                          </span>
+                        )}
+                        {p.members_count && p.members_count > 1 && (
+                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <Users className="w-3 h-3 text-slate-500" />
+                            {p.members_count}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-base font-semibold text-slate-100 group-hover:text-indigo-300 transition-colors truncate">
+                        {p.title}
+                      </h3>
+                    </div>
 
                     {/* Quick action icons */}
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => handleEdit(p, e)}
-                        title="Edit Project"
-                        className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(p, e)}
-                        title="Delete Project"
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {p.user_role !== 'viewer' && (
+                        <button
+                          onClick={(e) => handleEdit(p, e)}
+                          title="Edit Project"
+                          className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(p.user_role === 'owner' || !p.user_role) && (
+                        <button
+                          onClick={(e) => handleDelete(p, e)}
+                          title="Delete Project"
+                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
